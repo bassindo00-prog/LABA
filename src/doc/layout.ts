@@ -11,8 +11,8 @@ export const FONT_SERIF = "'Literata Variable', Literata, Georgia, 'Times New Ro
 export const FONT_SANS = "'Atkinson Hyperlegible Next Variable', 'Atkinson Hyperlegible', system-ui, sans-serif";
 export const FONT_MONO = "'Atkinson Hyperlegible Mono Variable', ui-monospace, 'SF Mono', Menlo, Consolas, monospace";
 
-const INK = '#23253a';
-const INK_SOFT = '#4a4d66';
+const INK = '#c8d0e8';
+const INK_SOFT = '#8892b8';
 
 interface Style {
   font: number;
@@ -43,8 +43,8 @@ export function typesetFonts(): FontSpec[] {
     { css: `650 25px ${FONT_SERIF}`, size: 25, color: INK }, // 2 h2
     { css: `650 20.5px ${FONT_SERIF}`, size: 20.5, color: INK }, // 3 h3
     { css: `italic 400 17.5px ${FONT_SERIF}`, size: 17.5, color: INK_SOFT }, // 4 quote
-    { css: `400 14.5px ${FONT_MONO}`, size: 14.5, color: '#2c2f48' }, // 5 code
-    { css: `400 12px ${FONT_MONO}`, size: 12, color: '#a2a5bb' }, // 6 line numbers
+    { css: `400 14.5px ${FONT_MONO}`, size: 14.5, color: '#a0a8cc' }, // 5 code
+    { css: `400 12px ${FONT_MONO}`, size: 12, color: '#5a6080' }, // 6 line numbers
   ];
 }
 

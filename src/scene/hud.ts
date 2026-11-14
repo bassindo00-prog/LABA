@@ -158,10 +158,10 @@ export function drawLogo(ctx: CanvasRenderingContext2D, x: number, y: number, si
   ctx.textAlign = 'left';
   ctx.font = `700 ${size}px ${UI_FONT}`;
   ctx.fillStyle = PALETTE.silk;
-  ctx.fillText('sp\u0131der crawler', x, y);
-  const width = ctx.measureText('sp\u0131der crawler').width;
-  const before = ctx.measureText('sp').width;
-  const iw = ctx.measureText('\u0131').width;
+  ctx.fillText('Avelin FX', x, y);
+  const width = ctx.measureText('Avelin FX').width;
+  const before = ctx.measureText('Ave').width;
+  const iw = ctx.measureText('l').width;
   const bob = Math.sin(time * 1.8) * size * 0.05;
   const dot = { x: x + before + iw / 2, y: y - size * 0.86 + bob };
   if (thread) {

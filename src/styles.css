@@ -110,14 +110,48 @@ button {
 
 .topbar {
   position: absolute;
-  top: max(14px, env(safe-area-inset-top));
+  top: max(10px, env(safe-area-inset-top));
+  left: max(16px, env(safe-area-inset-left));
   right: max(16px, env(safe-area-inset-right));
   z-index: 5;
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
 }
 
 .topbar-actions {
   display: flex;
   gap: 8px;
+  align-items: center;
+}
+
+/* Hamburger button always visible */
+.menu-toggle-btn {
+  position: relative;
+  z-index: 6;
+  flex-shrink: 0;
+}
+
+/* Drawer: hidden by default, slides in from the right */
+.topbar-drawer {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  /* slide out to the right */
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-width 0.3s ease, opacity 0.25s ease;
+  white-space: nowrap;
+}
+
+.topbar-drawer.open {
+  max-width: 400px;
+  opacity: 1;
+}
+
+@media (max-width: 600px) {
+  .topbar-actions::-webkit-scrollbar { display: none; }
 }
 
 .chip {
@@ -157,6 +191,10 @@ button {
   justify-content: center;
 }
 
+/* On very small screens show short AI label */
+@media (max-width: 480px) {
+  .ai-label .full-text { display: none; }
+}
 .sound-btn svg {
   width: 18px;
   height: 18px;

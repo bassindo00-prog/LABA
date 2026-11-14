@@ -29,9 +29,12 @@ const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as 
 
 function loadPrefs(): Prefs {
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const fallback: Prefs = { skin: 'blueprint', speed: reduced ? 2 : 1, frame: 'fill', sound: true };
+  const fallback: Prefs = { skin: 'stilts', speed: reduced ? 2 : 1, frame: 'fill', sound: true };
   try {
-    return { ...fallback, ...JSON.parse(localStorage.getItem('spider-crawler.prefs') ?? '{}') };
+    const saved = JSON.parse(localStorage.getItem('spider-crawler.prefs') ?? '{}');
+    // Always force skin to stilts regardless of saved preference
+    saved.skin = 'stilts';
+    return { ...fallback, ...saved };
   } catch {
     return fallback;
   }
@@ -854,6 +857,10 @@ export function startApp(): void {
       case 'N':
         goHome();
         break;
+      case 'f':
+      case 'F':
+        toggleFullscreen();
+        break;
       case 'Escape':
         if (!summaryEl.hidden || scene.phase !== 'ask') closeSummary();
         else {
@@ -873,8 +880,23 @@ export function startApp(): void {
 
   // ── Misc ──────────────────────────────────────────────────────────────
 
-  const gh = $<HTMLAnchorElement>('gh-link');
-  gh.href = REPO_URL;
+  // ── Hamburger menu drawer ─────────────────────────────────────────────
+
+  const menuToggle = $<HTMLButtonElement>('menu-toggle');
+  const topbarDrawer = document.getElementById('topbar-drawer')!;
+  function toggleDrawer(force?: boolean) {
+    const open = force !== undefined ? force : !topbarDrawer.classList.contains('open');
+    topbarDrawer.classList.toggle('open', open);
+    menuToggle.setAttribute('aria-expanded', String(open));
+    topbarDrawer.setAttribute('aria-hidden', String(!open));
+  }
+  menuToggle.addEventListener('click', (e) => { e.stopPropagation(); toggleDrawer(); });
+  // Close drawer when clicking outside
+  document.addEventListener('click', (e) => {
+    if (topbarDrawer.classList.contains('open') && !topbarDrawer.contains(e.target as Node) && e.target !== menuToggle) {
+      toggleDrawer(false);
+    }
+  });
 
   const soundBtn = $<HTMLButtonElement>('sound-btn');
   function setSound(on: boolean) {
@@ -887,6 +909,29 @@ export function startApp(): void {
   }
   setSound(prefs.sound);
   soundBtn.addEventListener('click', () => setSound(!prefs.sound));
+
+  // ── Fullscreen ────────────────────────────────────────────────────────
+
+  const fullscreenBtn = $<HTMLButtonElement>('fullscreen-btn');
+  function updateFullscreenIcon() {
+    const isFs = !!document.fullscreenElement;
+    const enterIcon = fullscreenBtn.querySelector<SVGElement>('.i-enter');
+    const exitIcon = fullscreenBtn.querySelector<SVGElement>('.i-exit');
+    if (enterIcon) enterIcon.style.display = isFs ? 'none' : '';
+    if (exitIcon) exitIcon.style.display = isFs ? '' : 'none';
+    fullscreenBtn.setAttribute('aria-label', isFs ? 'Exit fullscreen' : 'Enter fullscreen');
+    fullscreenBtn.title = isFs ? 'Exit fullscreen (F)' : 'Enter fullscreen (F)';
+  }
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  }
+  fullscreenBtn.addEventListener('click', toggleFullscreen);
+  document.addEventListener('fullscreenchange', () => { updateFullscreenIcon(); layout(); });
+  updateFullscreenIcon();
 
   const toasts = $<HTMLElement>('toasts');
   function toast(message: string, error = false) {

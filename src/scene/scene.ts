@@ -3,6 +3,7 @@ import { REPO_LABEL } from '../config';
 import type { Doc } from '../doc/types';
 import { DEFAULT_DRAW, drawSpider } from '../spider/draw';
 import type { Skin } from '../spider/skins';
+import { SKINS } from '../spider/skins';
 import { Spider, type SpiderMode } from '../spider/spider';
 import { AskRun } from './ask';
 import { drawAskCard } from './askCard';
@@ -89,11 +90,23 @@ export class Scene {
   private cardAlpha = 1;
   private lastMode: SpiderMode = 'walk';
 
+  /** Extra spiders that roam the idle screen. */
+  private extraSpiders: Spider[] = [];
+  private extraWanderAt: number[] = [];
+
   constructor(skin: Skin, private cb: SceneCallbacks = {}) {
     this.spider = new Spider({ x: 0, y: 0 }, skin, -Math.PI / 2);
     this.spider.onStep = (leg) => this.sound({ kind: 'step', volume: this.isIdle ? 0.6 : 1 }, leg.foot);
     this.spider.onLand = () => this.sound({ kind: 'land', volume: this.isIdle ? 0.6 : 1 }, this.spider.pos);
     this.cocoons.onArrive = () => this.sound({ kind: 'deliver' });
+    // Create 5 extra spiders using the 5 non-default skins
+    const extraSkins = SKINS.filter((s) => s.id !== skin.id).slice(0, 5);
+    for (const s of extraSkins) {
+      const sp = new Spider({ x: 0, y: 0 }, s, -Math.PI / 2);
+      sp.speedLimit = 220;
+      this.extraSpiders.push(sp);
+      this.extraWanderAt.push(0);
+    }
   }
 
   /** Sounds are events for the page to play: the scene only says what happened, and where. */
@@ -114,7 +127,20 @@ export class Scene {
     if (this.isIdle) {
       this.idle.layout(w, h, this.camera);
       this.camera.snap();
-      if (first) this.spider.place({ x: this.idle.roam.x + this.idle.roam.w * 0.72, y: this.idle.roam.y + this.idle.roam.h * 0.55 }, -2.4);
+      if (first) {
+        this.spider.place({ x: this.idle.roam.x + this.idle.roam.w * 0.72, y: this.idle.roam.y + this.idle.roam.h * 0.55 }, -2.4);
+        // Scatter extra spiders across the roam area
+        const offsets = [
+          [0.15, 0.3], [0.35, 0.7], [0.55, 0.25], [0.8, 0.6], [0.5, 0.5],
+        ];
+        for (let i = 0; i < this.extraSpiders.length; i++) {
+          const [ox, oy] = offsets[i] ?? [0.5, 0.5];
+          this.extraSpiders[i].place(
+            { x: this.idle.roam.x + this.idle.roam.w * ox, y: this.idle.roam.y + this.idle.roam.h * oy },
+            Math.random() * Math.PI * 2,
+          );
+        }
+      }
     } else if (this.phase === 'finale' && this.finale) {
       const c = this.finale.camera(w, h);
       this.camera.set(c.x, c.y, c.zoom);
@@ -133,6 +159,11 @@ export class Scene {
 
   setSkin(skin: Skin): void {
     this.spider.setSkin(skin);
+    // Re-assign extra spider skins, skipping the chosen one
+    const otherSkins = SKINS.filter((s) => s.id !== skin.id).slice(0, 5);
+    for (let i = 0; i < this.extraSpiders.length; i++) {
+      this.extraSpiders[i].setSkin(otherSkins[i] ?? SKINS[i]);
+    }
   }
 
   pointer(screen: Vec2 | null): void {
@@ -177,6 +208,18 @@ export class Scene {
     this.idle.layout(this.w, this.h, this.camera);
     this.camera.snap();
     this.spider.place({ x: this.idle.roam.x + this.idle.roam.w * 0.5, y: this.idle.roam.y + this.idle.roam.h * 0.5 }, -Math.PI / 2);
+    // Re-scatter extra spiders
+    const offsets = [
+      [0.15, 0.3], [0.35, 0.7], [0.55, 0.25], [0.8, 0.6], [0.5, 0.5],
+    ];
+    for (let i = 0; i < this.extraSpiders.length; i++) {
+      const [ox, oy] = offsets[i] ?? [0.5, 0.5];
+      this.extraSpiders[i].place(
+        { x: this.idle.roam.x + this.idle.roam.w * ox, y: this.idle.roam.y + this.idle.roam.h * oy },
+        -Math.PI / 2,
+      );
+      this.extraWanderAt[i] = 0;
+    }
     this.setPhase('idle');
   }
 
@@ -456,6 +499,18 @@ export class Scene {
         this.idle.update(now, this.spider);
         this.spider.update(dt);
         this.cardAlpha = Math.min(1, this.cardAlpha + dt * 3);
+        // Update extra spiders: wander randomly inside the roam area
+        for (let i = 0; i < this.extraSpiders.length; i++) {
+          const sp = this.extraSpiders[i];
+          sp.update(dt);
+          if (now >= this.extraWanderAt[i]) {
+            this.extraWanderAt[i] = now + 1.8 + (i * 0.7 + Math.sin(now * 0.3 + i) * 0.5);
+            sp.goal = {
+              x: this.idle.roam.x + Math.abs(Math.sin(now * 0.17 + i * 1.3)) * this.idle.roam.w,
+              y: this.idle.roam.y + Math.abs(Math.cos(now * 0.13 + i * 0.9)) * this.idle.roam.h,
+            };
+          }
+        }
         break;
       case 'leaving':
         this.spider.update(dt);
@@ -571,6 +626,12 @@ export class Scene {
     }
     this.cocoons.drawWrapping(ctx, now);
     drawSpider(ctx, this.spider, { ...DEFAULT_DRAW, shadow: this.phase === 'finale' ? 0 : 1, px: zoom * dpr });
+    // Draw extra spiders on the idle screen
+    if (this.isIdle || this.phase === 'leaving') {
+      for (const sp of this.extraSpiders) {
+        drawSpider(ctx, sp, { ...DEFAULT_DRAW, shadow: 1, px: zoom * dpr });
+      }
+    }
 
     // Screen-space overlay.
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);

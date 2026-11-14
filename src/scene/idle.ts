@@ -139,7 +139,7 @@ export class Idle {
     const c = this.card;
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.shadowColor = 'rgba(6, 8, 32, 0.55)';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
     ctx.shadowBlur = 50 * zoom * dpr;
     ctx.shadowOffsetY = 18 * zoom * dpr;
     ctx.fillStyle = PALETTE.paper;

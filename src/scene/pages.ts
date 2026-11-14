@@ -174,7 +174,7 @@ export class PageRenderer {
       ctx.globalAlpha = h.alpha;
       ctx.fillStyle = PALETTE.paper;
       ctx.fillRect(x, y, h.rect.w, h.rect.h);
-      ctx.strokeStyle = 'rgba(63, 156, 240, 0.6)';
+      ctx.strokeStyle = 'rgba(100, 150, 255, 0.5)';
       ctx.lineWidth = 1;
       ctx.setLineDash([3, 3]);
       ctx.strokeRect(x + 0.5, y + 0.5, h.rect.w - 1, h.rect.h - 1);
@@ -184,13 +184,17 @@ export class PageRenderer {
 
   private drawPaper(ctx: CanvasRenderingContext2D, page: Page) {
     // Stacked translucent rects fake a soft drop shadow at a fraction of shadowBlur's cost.
-    ctx.fillStyle = 'rgba(6, 8, 32, 0.07)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
     for (let i = 1; i <= 6; i++) {
       const g = i * 5;
       ctx.fillRect(page.x - g, page.y - g + 14, page.width + g * 2, page.height + g * 2);
     }
     ctx.fillStyle = PALETTE.paper;
     ctx.fillRect(page.x, page.y, page.width, page.height);
+    // Subtle dark border
+    ctx.strokeStyle = 'rgba(80, 100, 160, 0.25)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(page.x, page.y, page.width, page.height);
   }
 
   private setFont(ctx: CanvasRenderingContext2D, css: string) {
@@ -206,16 +210,16 @@ export class PageRenderer {
     for (const d of page.decorations) {
       switch (d.kind) {
         case 'codeBox':
-          ctx.fillStyle = '#f0f1f6';
+          ctx.fillStyle = '#141926';
           roundRect(ctx, ox + d.x, oy + d.y, d.w, d.h, 8);
           ctx.fill();
           break;
         case 'rule':
-          ctx.fillStyle = '#c9cbdb';
+          ctx.fillStyle = '#2a2f4a';
           ctx.fillRect(ox + d.x, oy + d.y, d.w, 1.2);
           break;
         case 'quoteBar':
-          ctx.fillStyle = '#d3d5e6';
+          ctx.fillStyle = '#1e2540';
           ctx.fillRect(ox + d.x, oy + d.y, d.w, d.h);
           break;
         case 'bullet':
@@ -257,7 +261,7 @@ export class PageRenderer {
       return;
     }
     // Placeholder while pdf.js renders: grey bars where the words are.
-    ctx.fillStyle = 'rgba(35, 37, 58, 0.12)';
+    ctx.fillStyle = 'rgba(180, 190, 220, 0.12)';
     for (const line of page.lines) {
       if (page.y + line.bottom < view.y || page.y + line.top > view.y + view.h) continue;
       for (const w of line.words) ctx.fillRect(page.x + w.x, page.y + w.y + w.h * 0.25, w.w, w.h * 0.5);
@@ -265,16 +269,33 @@ export class PageRenderer {
   }
 
   private drawHighlights(ctx: CanvasRenderingContext2D, page: Page, highlights: HighlightSeg[]) {
+    // Rainbow colors for highlighted (active/summary) sentences
+    const RAINBOW = [
+      'rgba(255, 220, 50, 0.55)',   // yellow
+      'rgba(255, 120, 60, 0.52)',   // orange
+      'rgba(255, 70, 140, 0.50)',   // pink
+      'rgba(140, 80, 255, 0.52)',   // purple
+      'rgba(50, 180, 255, 0.55)',   // cyan
+      'rgba(60, 230, 140, 0.52)',   // green
+    ];
     let any = false;
     for (const h of highlights) {
       if (h.page !== page.index || h.to <= h.from) continue;
       if (!any) {
         ctx.save();
-        ctx.globalCompositeOperation = 'multiply';
         any = true;
       }
-      // Yellow for the summary, red for clauses to read.
-      ctx.fillStyle = h.tone === 'flag' ? PALETTE.flag : h.tone === 'answer' ? PALETTE.answer : PALETTE.highlighter;
+      let color: string;
+      if (h.tone === 'flag') {
+        color = PALETTE.flag;
+      } else if (h.tone === 'answer') {
+        color = PALETTE.answer;
+      } else {
+        // Pick rainbow color based on vertical position for variety
+        const slot = Math.floor(((h.top + h.bottom) / 2 / 40 + page.index * 3)) % RAINBOW.length;
+        color = RAINBOW[Math.abs(slot)];
+      }
+      ctx.fillStyle = color;
       // Marker strokes are a little uneven: slight tilt, rounded ends.
       const x0 = page.x + h.from - 2.5;
       const x1 = page.x + h.to + 2.5;
